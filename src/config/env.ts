@@ -1,6 +1,7 @@
 export const ENV = {
 UAT: {
-    baseUrl: 'https://katalon-demo-cura.herokuapp.com/'
+    orangeHRMUrl: 'https://katalon-demo-cura.herokuapp.com/'
+    
 },
 
 LIVE: {
@@ -8,4 +9,4 @@ LIVE: {
 }
 };
 
-export const currentenv = 'ENV.UAT';        //changed to LIVE when test to LIVE environment
+export const currentenv = ENV.UAT;        //changed to LIVE when test to LIVE environment

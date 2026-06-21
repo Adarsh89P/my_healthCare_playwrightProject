@@ -4,7 +4,7 @@ import users from '../../src/testdata/user.json';
 import { test } from '../../src/fixtures/baseFixture';
 import { AppointmentPage } from '../../src/pages/appointmentPage';
 
-test('Login Test', async ({ page, loginPage }) => {
+test('Appointment Booking', async ({ page, loginPage }) => {
 
     await page.goto(currentenv.orangeHRMUrl);
 
@@ -14,4 +14,6 @@ test('Login Test', async ({ page, loginPage }) => {
     );
     const appointmentPage = new AppointmentPage(page);
     await appointmentPage.navigateToAppointmentPage();
+    await appointmentPage.bookAppointment(users.facility.Hongkong);
+    await appointmentPage.navigateToBookingConfirmationPage();
 });

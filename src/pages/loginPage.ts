@@ -16,6 +16,5 @@ homeloginButton = 'a[href="profile.php#login"]';
         await this.page.fill(this.usernameInput, user);
         await this.page.fill(this.passwordInput, pass);
         await this.page.click(this.loginButton);
-
 }
 }
