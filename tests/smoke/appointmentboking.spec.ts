@@ -3,6 +3,7 @@ import { currentenv } from '../../src/config/env';
 import users from '../../src/testdata/user.json';
 import { test } from '../../src/fixtures/baseFixture';
 import { AppointmentPage } from '../../src/pages/appointmentPage';
+import { logger } from '../../src/utils/logger';
 
 test('Appointment Booking', async ({ page, loginPage }) => {
 
@@ -16,4 +17,5 @@ test('Appointment Booking', async ({ page, loginPage }) => {
     await appointmentPage.navigateToAppointmentPage();
     await appointmentPage.bookAppointment(users.facility.Hongkong);
     await appointmentPage.navigateToBookingConfirmationPage();
+    logger.info('Appointment booked successfully');
 });
