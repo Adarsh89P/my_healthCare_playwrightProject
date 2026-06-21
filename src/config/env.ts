@@ -1,6 +1,6 @@
 export const ENV = {
 UAT: {
-    baseUrl: 'https://uat.example.com',
+    baseUrl: 'https://katalon-demo-cura.herokuapp.com/'
 },
 
 LIVE: {
