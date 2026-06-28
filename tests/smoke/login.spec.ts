@@ -14,4 +14,6 @@ test('Login Test', async ({ page, loginPage }) => {
     );
     const appointmentPage = new AppointmentPage(page);
     await appointmentPage.navigateToAppointmentPage();
+  
+    
 });
