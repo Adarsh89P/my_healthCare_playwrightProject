@@ -5,7 +5,7 @@ import { test } from '../../src/fixtures/baseFixture';
 import { AppointmentPage } from '../../src/pages/appointmentPage';
 import { logger } from '../../src/utils/logger';
 
-test('Appointment Booking', async ({ page, loginPage }) => {
+test('@smoke Appointment Booking', async ({ page, loginPage }) => {
 
     await page.goto(currentenv.orangeHRMUrl);
 

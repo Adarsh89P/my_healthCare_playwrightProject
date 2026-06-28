@@ -4,7 +4,7 @@ import users from '../../src/testdata/user.json';
 import { test } from '../../src/fixtures/baseFixture';
 import { AppointmentPage } from '../../src/pages/appointmentPage';
 
-test('Login Test', async ({ page, loginPage }) => {
+test('@smoke Login Test', async ({ page, loginPage }) => {
 
     await page.goto(currentenv.orangeHRMUrl);
 
