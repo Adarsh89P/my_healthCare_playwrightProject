@@ -3,7 +3,14 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "test": "playwright test",
+    "test:healthcare": "cross-env APP=healthcare playwright test",
+    "test:healthcare:smoke": "cross-env APP=healthcare playwright test --grep @smoke",
+    "test:healthcare:regression": "cross-env APP=healthcare playwright test --grep @regression",
+    "report": "playwright show-report",
+    "report:allure": "allure generate allure-results --clean -o allure-report && allure open allure-report"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -11,9 +18,13 @@
   "devDependencies": {
     "@playwright/test": "^1.61.0",
     "@types/node": "^26.0.0",
-    "allure-playwright": "^3.10.0"
+    "allure-commandline": "^2.34.0",
+    "allure-playwright": "^3.10.0",
+    "cross-env": "^7.0.3",
+    "typescript": "^5.7.2"
   },
   "dependencies": {
+    "dotenv": "^16.4.5",
     "winston": "^3.19.0"
   }
 }

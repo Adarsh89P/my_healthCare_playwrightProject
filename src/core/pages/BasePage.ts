@@ -16,6 +16,14 @@ export class BasePage {
         await locator.fill(text);
     }
 
+    async check(locator: Locator) {
+        await locator.check();
+    }
+
+    async selectOption(locator: Locator, value: string | number | { label?: string; value?: string; index?: number }) {
+        await locator.selectOption(value as any);
+    }
+
     async getText(locator: Locator) {
         return await locator.textContent();
     }
@@ -36,6 +44,10 @@ export class BasePage {
 
     async expectText(locator: Locator, text: string) {
         await expect(locator).toHaveText(text);
+    }
+
+    async expectUrl(url: string | RegExp) {
+        await expect(this.page).toHaveURL(url);
     }
 
     async takeScreenshot(fileName: string = 'screenshot.png') {

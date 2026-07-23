@@ -6,9 +6,12 @@ on:
     branches: [ main, master ]
 jobs:
   smoke-tests:
-    name: Smoke Test Execution
+    name: Smoke Test Execution (${{ matrix.app }})
     timeout-minutes: 60
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [healthcare]
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -21,21 +24,26 @@ jobs:
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
     - name: Run Playwright tests
-      run: npx playwright test
+      run: npx playwright test --grep @smoke
+      env:
+        APP: ${{ matrix.app }}
     - name: Upload Allure Results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: allure-results
+        name: allure-results-${{ matrix.app }}
         path: allure-results/
         retention-days: 30
 
-        
+
   regression-tests:
-    name: Regression Test Execution
+    name: Regression Test Execution (${{ matrix.app }})
     needs: smoke-tests
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      matrix:
+        app: [healthcare]
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -49,17 +57,19 @@ jobs:
       run: npx playwright install --with-deps
     - name: Run Regression Tests
       run: npx playwright test --grep @regression
+      env:
+        APP: ${{ matrix.app }}
     - name: Upload Playwright Report
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: regression-playwright-report
+        name: regression-playwright-report-${{ matrix.app }}
         path: playwright-report/
         retention-days: 30
     - name: Upload Allure Results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: regression-allure-results
+        name: regression-allure-results-${{ matrix.app }}
         path: allure-results/
         retention-days: 30

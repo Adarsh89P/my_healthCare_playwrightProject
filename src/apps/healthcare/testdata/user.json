@@ -1,13 +1,5 @@
 {
-  "admin": {
-    "username": "Admin",
-    "password": "admin123"
-  },
-  "customers": {
-    "custusername": "John Doe",
-    "custpassword": "ThisIsNotAPassword"
-  },
-"facility": {
+  "facility": {
     "Tokyo": "Tokyo CURA Healthcare Center",
     "Hongkong": "Hongkong CURA Healthcare Center",
     "Seoul": "Seoul CURA Healthcare Center"
@@ -18,5 +10,4 @@
   "comment": {
     "text": "This is a comment for testing purposes."
   }
-
 }
