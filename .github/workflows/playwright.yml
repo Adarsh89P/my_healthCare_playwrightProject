@@ -4,6 +4,18 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+
+# CURA Healthcare is a public demo application and these are its published
+# demo credentials, not real secrets - safe to keep in the workflow. In a
+# non-demo project these would be stored as GitHub Actions secrets instead.
+env:
+  TEST_ENV: uat
+  BASE_URL: https://katalon-demo-cura.herokuapp.com/
+  HEALTHCARE_ADMIN_USERNAME: Admin
+  HEALTHCARE_ADMIN_PASSWORD: admin123
+  HEALTHCARE_CUST_USERNAME: John Doe
+  HEALTHCARE_CUST_PASSWORD: ThisIsNotAPassword
+
 jobs:
   smoke-tests:
     name: Smoke Test Execution
@@ -20,17 +32,23 @@ jobs:
       run: npm ci
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
-    - name: Run Playwright tests
-      run: npx playwright test
+    - name: Run Smoke Tests
+      run: npx playwright test --grep @smoke
+    - name: Upload Playwright Report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: smoke-playwright-report
+        path: playwright-report/
+        retention-days: 30
     - name: Upload Allure Results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: allure-results
+        name: smoke-allure-results
         path: allure-results/
         retention-days: 30
 
-        
   regression-tests:
     name: Regression Test Execution
     needs: smoke-tests

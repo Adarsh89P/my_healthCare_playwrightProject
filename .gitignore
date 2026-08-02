@@ -6,3 +6,10 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+/allure-results/
+/allure-report/
+
+# Environment files (may hold local credentials) - see .env.example
+.env
+.env.*
+!.env.example

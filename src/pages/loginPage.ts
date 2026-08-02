@@ -12,6 +12,7 @@ passwordInput = this.page.locator('input[name="password"]');
 loginButton = this.page.locator('button[type="submit"]');
 hamburgermenuButton = this.page.locator('a[id="menu-toggle"]');
 homeloginButton = this.page.locator('a[href="profile.php#login"]');
+loginErrorMessage = this.page.locator('#login p.text-danger');
 
  async login(user: string, pass: string) {
         await this.click(this.hamburgermenuButton);
