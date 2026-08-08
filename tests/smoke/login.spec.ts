@@ -1,32 +1,46 @@
-import { LoginPage } from '../../src/pages/loginPage';
-import { currentenv } from '../../src/config/env';
-import users from '../../src/testdata/user.json';
-import { test } from '../../src/fixtures/baseFixture';
-import { AppointmentPage } from '../../src/pages/AppointmentPage';
-import { expect } from '@playwright/test';
+import { test, expect } from '@fixtures/index';
+import { config } from '@core/config/env';
+import { MESSAGES } from '@data/facilities';
 
-test('@smoke Login Test', async ({ page, loginPage }) => {
+/**
+ * Login runs signed out, so it opts out of the shared authenticated
+ * storage state that every other suite relies on.
+ */
+test.use({ storageState: { cookies: [], origins: [] } });
 
-    await page.goto(currentenv.baseUrl);
+test.describe('Authentication', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+  });
 
-    await loginPage.login(
-      users.customers.custusername,
-      users.customers.custpassword
-    );
-    const appointmentPage = new AppointmentPage(page);
-    await appointmentPage.navigateToAppointmentPage();
-});
+  test(
+    'signs in with valid credentials and lands on the appointment page',
+    { tag: ['@smoke'] },
+    async ({ loginPage, appointmentPage }) => {
+      await loginPage.login(config.user);
+      await appointmentPage.expectOnAppointmentPage();
+    }
+  );
 
-test('@regression Login with invalid credentials shows an error', async ({ page, loginPage }) => {
+  test(
+    'rejects invalid credentials with an error message',
+    { tag: ['@regression'] },
+    async ({ loginPage }) => {
+      await loginPage.login({ username: 'invalidUser', password: 'invalidPassword' });
+      await loginPage.expectLoginFailed(MESSAGES.loginFailed);
+    }
+  );
 
-    await page.goto(currentenv.baseUrl);
+  test(
+    'does not authenticate when credentials are empty',
+    { tag: ['@regression'] },
+    async ({ page, loginPage }) => {
+      await loginPage.openLoginForm();
+      await loginPage.submitCredentials('', '');
 
-    await loginPage.login('invalidUser', 'invalidPassword');
-
-    await expect(page).toHaveURL(/.*#login/);
-    await loginPage.expectVisible(loginPage.loginErrorMessage);
-    await loginPage.expectText(
-      loginPage.loginErrorMessage,
-      'Login failed! Please ensure the username and password are valid.'
-    );
+      // Whether the app blocks this client-side or server-side, the one thing
+      // that must never happen is reaching the authenticated area.
+      await expect(page).not.toHaveURL(/.*#appointment/);
+    }
+  );
 });

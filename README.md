@@ -1,96 +1,193 @@
-# CURA Healthcare — Playwright Automation Framework
+# Playwright Test Automation Framework
 
 [![Playwright Tests](https://github.com/Adarsh89P/my_healthCare_playwrightProject/actions/workflows/playwright.yml/badge.svg)](https://github.com/Adarsh89P/my_healthCare_playwrightProject/actions/workflows/playwright.yml)
 
-An end-to-end UI test automation framework for the [CURA Healthcare](https://katalon-demo-cura.herokuapp.com/) demo application, built with Playwright and TypeScript using the Page Object Model. It covers the login and appointment-booking flows across Chromium, Firefox, and WebKit, with tagged smoke/regression suites, environment-based configuration, and Allure + HTML reporting wired into CI.
+A reusable end-to-end test automation framework built with **Playwright + TypeScript**.
+Point it at any web application by editing one `.env` file — no framework rebuild, no
+code changes to the core.
 
-## Test report
+The repository ships with a working reference suite against the
+[CURA Healthcare](https://katalon-demo-cura.herokuapp.com/) demo app so the framework is
+runnable the moment you clone it.
 
-![Playwright HTML report showing 10 passed tests across chromium and webkit](docs/test-report-screenshot.png)
+---
 
-## Tech stack
+## Why this is reusable
 
-| Area           | Tool                                             |
-|----------------|---------------------------------------------------|
-| Test runner    | [Playwright Test](https://playwright.dev/) (TypeScript) |
-| Design pattern | Page Object Model (`BasePage` + page classes)      |
-| Reporting      | Playwright HTML reporter, [Allure](https://allurereport.org/) |
-| Logging        | [winston](https://github.com/winstonjs/winston)   |
-| Env config     | [dotenv](https://github.com/motdotla/dotenv), switched via `TEST_ENV` |
-| CI             | GitHub Actions (smoke job → regression job)        |
+The codebase is split into two layers with a hard boundary between them:
 
-## Architecture / folder structure
+| Layer                                                   | What it contains                                       | Changes per project?   |
+| ------------------------------------------------------- | ------------------------------------------------------ | ---------------------- |
+| **`src/core/`** — the framework                         | Base page, validated config, logger, date/data helpers | **No** — copy as-is    |
+| **`src/pages`, `src/testdata`, `tests/`** — the project | Page objects, test data, specs                         | Yes — this is your app |
 
-```
-├── .github/workflows/playwright.yml   # CI: smoke job, then regression job, uploads reports as artifacts
-├── playwright.config.ts               # Loads .env.<TEST_ENV>, browser projects, reporters, CI settings
-├── src/
-│   ├── config/env.ts                  # Reads BASE_URL etc. from process.env (populated by dotenv)
-│   ├── fixtures/baseFixture.ts        # Custom Playwright test fixture that injects page objects
-│   ├── pages/
-│   │   ├── BasePage.ts                # Shared Locator-based actions (click, fill, expectVisible, ...)
-│   │   ├── loginPage.ts               # Login page object
-│   │   └── AppointmentPage.ts         # Appointment booking page object (extends BasePage)
-│   ├── testdata/user.json             # Test data: credentials, facilities, etc.
-│   └── utils/logger.ts                # winston logger
-├── tests/
-│   ├── smoke/                         # @smoke — golden-path checks (login, booking)
-│   └── regression/                    # @regression — negative paths & extra flows
-├── .env.example                       # Template for local .env.uat / .env.live files (no real secrets)
-└── docs/test-report-screenshot.png
-```
+Everything environment-specific (URL, credentials, timeouts, browsers, log level) is read
+from `.env.<TEST_ENV>` through a single validated `config` object. Nothing in the codebase
+touches `process.env` directly, so a missing variable fails once with a message telling you
+how to fix it — instead of surfacing as `undefined` three layers deep.
 
-Every page object extends `BasePage`, which wraps common Playwright actions (`click`, `fill`, `expectVisible`, `selectDropdown`, ...) around `Locator` objects — no raw CSS-selector strings are passed around at the test level.
+---
 
-## Setup
+## Quick start
 
 ```bash
 npm ci
 npx playwright install --with-deps
+
+cp .env.example .env.uat     # then edit BASE_URL + credentials
+npm test
 ```
 
-Copy the example env file and adjust if needed (the defaults already point at the public CURA demo instance):
+---
 
-```bash
-cp .env.example .env.uat
+## Using it on a new project
+
+1. **Copy the repo** (or just `src/core/`, `playwright.config.ts`, `tsconfig.json`,
+   `eslint.config.mjs`).
+2. **Point it at your app** — edit `.env.uat`:
+   ```ini
+   BASE_URL=https://your-app.example.com
+   APP_USER_USERNAME=your.user@example.com
+   APP_USER_PASSWORD=...
+   ```
+3. **Update the auth setup** — [tests/setup/auth.setup.ts](tests/setup/auth.setup.ts) drives
+   your app's login once; every other test then starts already signed in.
+4. **Add page objects** under `src/pages/`, extending `BasePage`.
+5. **Register them as fixtures** in [src/fixtures/index.ts](src/fixtures/index.ts) — one line each.
+6. **Write specs** in `tests/`, tagged `@smoke` or `@regression`.
+
+Nothing under `src/core/` needs to change.
+
+---
+
+## Commands
+
+| Command                     | What it does                                       |
+| --------------------------- | -------------------------------------------------- |
+| `npm test`                  | Run everything                                     |
+| `npm run test:smoke`        | Only `@smoke`-tagged tests                         |
+| `npm run test:regression`   | Only `@regression`-tagged tests                    |
+| `npm run test:chromium`     | Single browser (fastest feedback)                  |
+| `npm run test:ui`           | Playwright UI mode — time-travel debugging         |
+| `npm run test:debug`        | Step through with the inspector                    |
+| `npm run test:headed`       | Watch the browser                                  |
+| `npm run test:live`         | Run against `.env.live`                            |
+| `npm run report`            | Open the last HTML report                          |
+| `npm run allure:serve`      | Open the Allure report                             |
+| `npm run typecheck`         | `tsc --noEmit` — strict type checking              |
+| `npm run lint` / `lint:fix` | ESLint incl. `eslint-plugin-playwright` rules      |
+| `npm run format`            | Prettier                                           |
+| `npm run verify`            | typecheck + lint + format check (what CI gates on) |
+| `npm run clean`             | Delete all reports, traces and cached auth state   |
+
+---
+
+## Configuration
+
+All settings live in `.env.<TEST_ENV>`; see [.env.example](.env.example) for the full list.
+
+| Variable                                               | Default                             | Purpose                                |
+| ------------------------------------------------------ | ----------------------------------- | -------------------------------------- |
+| `TEST_ENV`                                             | `uat`                               | Which `.env` file to load              |
+| `BASE_URL`                                             | _required_                          | App under test                         |
+| `API_BASE_URL`                                         | `BASE_URL`                          | API tests                              |
+| `APP_USER_USERNAME` / `_PASSWORD`                      | _required on login_                 | Standard account                       |
+| `APP_ADMIN_USERNAME` / `_PASSWORD`                     | optional                            | Elevated account                       |
+| `BROWSERS`                                             | `chromium` locally, all three in CI | Comma-separated browser list           |
+| `TIMEOUT_TEST` / `_EXPECT` / `_ACTION` / `_NAVIGATION` | `60s`/`10s`/`15s`/`30s`             | Timeout budgets                        |
+| `LOG_LEVEL`                                            | `info`                              | `error` \| `warn` \| `info` \| `debug` |
+| `HEADED`                                               | `false`                             | Watch the browser locally              |
+
+Credentials are resolved **lazily** — a project that never signs in as an admin doesn't
+have to define admin credentials.
+
+---
+
+## Architecture
+
+```
+├── .github/workflows/playwright.yml  # quality gate → 4 sharded test jobs → merged report
+├── playwright.config.ts              # timeouts, reporters, browser projects (from BROWSERS)
+├── tsconfig.json                     # strict mode + @core/@pages/@fixtures/@data aliases
+├── eslint.config.mjs                 # TS + Playwright lint rules
+│
+├── src/
+│   ├── core/                         # ── REUSABLE FRAMEWORK ──
+│   │   ├── base/BasePage.ts          #    action/assertion wrappers with test.step reporting
+│   │   ├── config/env.ts             #    validated, typed configuration
+│   │   └── utils/
+│   │       ├── logger.ts             #    winston: console + JSON file transport
+│   │       └── dates.ts              #    date helpers (no hardcoded calendar dates)
+│   │
+│   ├── pages/                        # ── PROJECT-SPECIFIC ──
+│   │   ├── LoginPage.ts
+│   │   └── AppointmentPage.ts
+│   ├── fixtures/index.ts             #    page objects injected as fixtures
+│   └── testdata/facilities.ts        #    non-secret test data
+│
+└── tests/
+    ├── setup/auth.setup.ts           # logs in once → playwright/.auth/user.json
+    ├── smoke/                        # @smoke — golden paths
+    └── regression/                   # @regression — negative paths, data-driven cases
 ```
 
-## Running tests
+### Authentication is performed once
 
-```bash
-npm test                 # everything, all 3 browsers (chromium, firefox, webkit)
-npm run test:smoke       # only @smoke-tagged tests
-npm run test:regression  # only @regression-tagged tests
-npm run test:headed      # run headed, useful for debugging locally
-npm run report           # open the last HTML report
+A `setup` project signs in through the UI and saves the browser state to
+`playwright/.auth/user.json`. Every browser project declares `dependencies: ['setup']` and
+loads that state, so tests begin authenticated instead of repeating a four-step UI login.
+
+A spec that must run signed out opts back out explicitly:
+
+```ts
+test.use({ storageState: { cookies: [], origins: [] } });
 ```
 
-Tag-based filtering also works directly through the Playwright CLI, e.g. `npx playwright test --grep @smoke --project=chromium`.
+### Page objects report themselves
 
-### Environment switching
+`BasePage` wrappers emit a named `test.step`, so the HTML and Allure reports read as a
+legible sequence rather than a wall of raw actions — while still forwarding Playwright's
+own options through:
 
-`playwright.config.ts` reads `TEST_ENV` (defaults to `uat`) and loads the matching `.env.<TEST_ENV>` file via `dotenv` **before** the config or any test file is evaluated. `src/config/env.ts` then exposes the resolved values (e.g. `currentenv.baseUrl`) to tests and page objects.
-
-```bash
-TEST_ENV=uat npx playwright test    # loads .env.uat  (default)
-TEST_ENV=live npx playwright test   # loads .env.live
+```ts
+await this.click(this.loginButton, { force: true });
+// report: "Click button[type=\"submit\"]"
 ```
 
-`.env.uat`, `.env.live`, and `.env` are all git-ignored — only `.env.example` (placeholder values, no secrets) is committed. CI supplies the required variables directly as workflow environment variables instead of a committed env file (see the comment in `.github/workflows/playwright.yml` — these are CURA's own published public demo credentials, not real secrets).
+`BasePage.isVisible()` deliberately **waits** before answering, unlike Playwright's
+non-retrying `locator.isVisible()`, which is a common source of flakiness.
 
-## CI
+---
 
-`.github/workflows/playwright.yml` runs on every push/PR to `main`/`master`:
+## CI pipeline
 
-1. **Smoke Test Execution** — runs `@smoke` tests across all configured browsers.
-2. **Regression Test Execution** — runs after smoke passes, executes `@regression` tests.
+1. **`quality`** — typecheck, lint and format check. Fails fast before any browser starts.
+2. **`test`** — 4 parallel shards × 3 browsers, with the browser binaries cached on the
+   Playwright version. Each shard emits a `blob` report.
+3. **`report`** — merges the shards into one HTML report and publishes an Allure report
+   (with run-over-run history) to GitHub Pages.
 
-Both jobs upload the Playwright HTML report and the raw Allure results as downloadable CI artifacts (see the **Artifacts** section of any workflow run in the [Actions tab](https://github.com/Adarsh89P/my_healthCare_playwrightProject/actions)). To view the Allure report from a CI run locally:
+`workflow_dispatch` lets you trigger `all` / `smoke` / `regression` manually from the
+Actions tab. `BASE_URL` comes from a repository **variable** and credentials from
+repository **secrets**, so the workflow is reusable without edits.
 
-```bash
-# after downloading and unzipping the "smoke-allure-results" or "regression-allure-results" artifact
-npx allure generate <path-to-downloaded-results> --clean -o allure-report
-npx allure open allure-report
-```
+---
 
-On CI, `fullyParallel` is on, `forbidOnly` blocks accidental `test.only` commits, and failed tests retry twice (all gated behind `process.env.CI`).
+## Conventions
+
+- **Tag, don't rely on folders** — `test('...', { tag: ['@smoke'] }, ...)`. `--grep` filters on tags.
+- **Never hardcode a calendar date** — use `daysFromToday()` / `nearFutureDateInCurrentMonth()`.
+  A date that was "in the future" when written eventually rots.
+- **Never commit credentials** — they belong in `.env.<TEST_ENV>` (gitignored) or CI secrets.
+- **Assert everything you submitted**, not just one field. `expectConfirmationMatches()` checks
+  facility, readmission, programme, date and comment — an earlier version checked only the
+  facility, so a wrong date would have passed.
+
+---
+
+## Roadmap
+
+- AI layer (`src/ai/`): self-healing locators, semantic assertions, AI failure triage in CI
+- API testing via Playwright's `request` fixture
+- Accessibility scans with `@axe-core/playwright`
+- Visual regression with `toHaveScreenshot()`

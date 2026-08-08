@@ -1,43 +1,83 @@
-import { expect } from '@playwright/test';
-import { currentenv } from '../../src/config/env';
-import users from '../../src/testdata/user.json';
-import { test } from '../../src/fixtures/baseFixture';
-import { AppointmentPage } from '../../src/pages/AppointmentPage';
-import { logger } from '../../src/utils/logger';
+import { test, expect } from '@fixtures/index';
+import { ALL_FACILITIES, FACILITIES } from '@data/facilities';
+import { HealthcareProgram } from '@pages/AppointmentPage';
 
-test('@regression Appointment booking with a different facility (Seoul)', async ({ page, loginPage }) => {
+test.describe('Appointment booking - regression', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/#appointment');
+  });
 
-    await page.goto(currentenv.baseUrl);
+  /* Data-driven: every facility should book identically. */
+  for (const facility of ALL_FACILITIES) {
+    test(
+      `books an appointment at ${facility}`,
+      { tag: ['@regression'] },
+      async ({ appointmentPage }) => {
+        const booked = await appointmentPage.bookAppointment({ facility });
 
-    await loginPage.login(
-      users.customers.custusername,
-      users.customers.custpassword
+        await appointmentPage.expectOnConfirmationPage();
+        await appointmentPage.expectConfirmationMatches(booked);
+      }
     );
-    const appointmentPage = new AppointmentPage(page);
-    await appointmentPage.navigateToAppointmentPage();
-    await appointmentPage.bookAppointment(users.facility.Seoul);
-    await appointmentPage.navigateToBookingConfirmationPage();
-    await appointmentPage.expectText(appointmentPage.confirmationFacility, users.facility.Seoul);
-    logger.info('Appointment booked successfully for Seoul facility');
-});
+  }
 
-test('@regression Booking without required visit date shows validation error', async ({ page, loginPage }) => {
+  /* Each selectable healthcare programme should be echoed back on the
+     confirmation. 'None' is deliberately excluded - see the default test below. */
+  const programs: HealthcareProgram[] = ['Medicare', 'Medicaid'];
+  for (const program of programs) {
+    test(
+      `records the "${program}" healthcare programme`,
+      { tag: ['@regression'] },
+      async ({ appointmentPage }) => {
+        const booked = await appointmentPage.bookAppointment({
+          facility: FACILITIES.tokyo,
+          program,
+        });
 
-    await page.goto(currentenv.baseUrl);
-
-    await loginPage.login(
-      users.customers.custusername,
-      users.customers.custpassword
+        await appointmentPage.expectOnConfirmationPage();
+        await appointmentPage.expectText(appointmentPage.confirmationProgram, booked.program);
+      }
     );
-    const appointmentPage = new AppointmentPage(page);
-    await appointmentPage.navigateToAppointmentPage();
-    await appointmentPage.submitWithoutVisitDate(users.facility.Tokyo);
+  }
 
-    // The visit date field is a required HTML5 input; the browser blocks
-    // submission, so the app should never reach the booking confirmation page.
-    await expect(page).toHaveURL(/.*#appointment/);
-    const isValid = await appointmentPage.visitDateInput.evaluate(
-      (el: HTMLInputElement) => el.checkValidity()
-    );
-    expect(isValid).toBe(false);
+  test(
+    'defaults to the Medicare programme when none is selected',
+    { tag: ['@regression'] },
+    async ({ appointmentPage }) => {
+      // The Medicare radio ships pre-checked, so there is no way to submit the
+      // form with no programme at all - the confirmation always reports one.
+      await appointmentPage.bookAppointment({ facility: FACILITIES.tokyo, program: 'None' });
+
+      await appointmentPage.expectOnConfirmationPage();
+      await appointmentPage.expectText(appointmentPage.confirmationProgram, 'Medicare');
+    }
+  );
+
+  test(
+    'records an appointment without hospital readmission',
+    { tag: ['@regression'] },
+    async ({ appointmentPage }) => {
+      const booked = await appointmentPage.bookAppointment({
+        facility: FACILITIES.seoul,
+        hospitalReadmission: false,
+      });
+
+      await appointmentPage.expectOnConfirmationPage();
+      await appointmentPage.expectConfirmationMatches(booked);
+    }
+  );
+
+  test(
+    'blocks submission when the visit date is missing',
+    { tag: ['@regression'] },
+    async ({ page, appointmentPage }) => {
+      await appointmentPage.fillAppointmentForm({ facility: FACILITIES.tokyo });
+      await appointmentPage.submitForm();
+
+      // Visit date is a required HTML5 input, so the browser blocks submission
+      // and the app never reaches the booking confirmation page.
+      await expect(page).toHaveURL(/.*#appointment/);
+      expect(await appointmentPage.isVisitDateValid()).toBe(false);
+    }
+  );
 });

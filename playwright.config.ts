@@ -1,57 +1,74 @@
 import { defineConfig, devices } from '@playwright/test';
-import dotenv from 'dotenv';
-import path from 'path';
+import { BrowserName, config } from './src/core/config/env';
+
+const STORAGE_STATE = 'playwright/.auth/user.json';
+
+const DEVICE_FOR: Record<BrowserName, string> = {
+  chromium: 'Desktop Chrome',
+  firefox: 'Desktop Firefox',
+  webkit: 'Desktop Safari',
+};
 
 /**
- * Load environment variables from the file matching TEST_ENV (uat|live).
- * Defaults to "uat". See .env.example for the variables this project needs.
- * In CI, these variables are provided directly by the workflow, so a
- * missing .env.<TEST_ENV> file here is not an error.
- */
-const testEnv = process.env.TEST_ENV || 'uat';
-dotenv.config({ path: path.resolve(__dirname, `.env.${testEnv}`) });
-
-/**
- * See https://playwright.dev/docs/test-configuration.
+ * Framework-level Playwright configuration.
+ *
+ * Everything environment-specific (URLs, credentials, timeouts) comes from
+ * `config`, which reads .env.<TEST_ENV>. Pointing this framework at a different
+ * application should never require editing this file.
+ *
+ * See https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
   testDir: './tests',
-  /* Run tests in files in parallel */
-  fullyParallel: true,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
-  forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: [
-    ['html'],
-    ['allure-playwright'],
-  ],
-  use: {
-    /* Base URL to use in actions like `await page.goto('')`. */
-    baseURL: process.env.BASE_URL,
 
-    trace: 'on-first-retry',
+  /* Per-test and per-assertion budgets, overridable via env vars. */
+  timeout: config.timeouts.test,
+  expect: { timeout: config.timeouts.expect },
+
+  fullyParallel: true,
+
+  /* Fail the build if a `test.only` was committed. */
+  forbidOnly: config.isCI,
+
+  retries: config.isCI ? 2 : 0,
+
+  /* Use the runner's cores in CI too; sharding in the workflow splits the load
+     further across machines. */
+  workers: config.isCI ? '50%' : undefined,
+
+  /* `blob` in CI so shards can be merged into one report afterwards. */
+  reporter: config.isCI
+    ? [['blob'], ['github'], ['allure-playwright'], ['list']]
+    : [['html', { open: 'never' }], ['allure-playwright'], ['list']],
+
+  use: {
+    baseURL: config.baseUrl,
+    headless: !config.headed,
+
+    actionTimeout: config.timeouts.action,
+    navigationTimeout: config.timeouts.navigation,
+
+    trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
   },
 
-  /* Configure projects for major browsers */
   projects: [
+    /* Logs in once and writes playwright/.auth/user.json. Every browser
+       project depends on it, so tests start already authenticated. */
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
     },
 
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
+    /* Browser projects are generated from BROWSERS (chromium-only locally,
+       all three in CI) so a project can pick its own coverage without
+       editing this file. */
+    ...config.browsers.map((browser) => ({
+      name: browser,
+      use: { ...devices[DEVICE_FOR[browser]], storageState: STORAGE_STATE },
+      dependencies: ['setup'],
+      testIgnore: /.*\.setup\.ts/,
+    })),
   ],
 });

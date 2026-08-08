@@ -1,15 +1,23 @@
-
-# Playwright
+# Dependencies
 node_modules/
+
+# Playwright artefacts
 /test-results/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# Allure artefacts
 /allure-results/
 /allure-report/
 
-# Environment files (may hold local credentials) - see .env.example
+# Environment files (hold credentials) - see .env.example
 .env
 .env.*
 !.env.example
+
+# Editor / OS
+.DS_Store
+.idea/
+*.log
