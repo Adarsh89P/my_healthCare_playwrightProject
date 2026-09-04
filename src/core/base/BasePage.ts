@@ -7,6 +7,27 @@ type WaitForOptions = Parameters<Locator['waitFor']>[0];
 type SelectOptionValues = Parameters<Locator['selectOption']>[0];
 
 /**
+ * Optional recovery hook, invoked when an action fails on a locator.
+ *
+ * Returning a replacement `Locator` causes the action to be retried once;
+ * returning `undefined` rethrows the original error. This exists so the
+ * optional AI self-healing layer can plug in WITHOUT `src/core` taking a
+ * dependency on `src/ai` - core stays copy-and-go for any project.
+ */
+export type ActionRecovery = (
+  page: Page,
+  failedSelector: string,
+  intent: string
+) => Promise<Locator | undefined>;
+
+let actionRecovery: ActionRecovery | undefined;
+
+/** Installs a recovery handler. Called once at fixture-setup time. */
+export function registerActionRecovery(handler: ActionRecovery | undefined): void {
+  actionRecovery = handler;
+}
+
+/**
  * Project-agnostic base for every page object.
  *
  * Each wrapper does three things a bare `locator.click()` does not:
@@ -32,6 +53,29 @@ export abstract class BasePage {
     return test.step(title, body);
   }
 
+  /**
+   * Runs an action, and if it fails, gives the recovery hook one chance to
+   * supply a replacement locator before rethrowing. With no hook registered
+   * this is exactly `action(locator)` plus a try/catch.
+   */
+  protected async withRecovery<T>(
+    locator: Locator,
+    intent: string,
+    action: (target: Locator) => Promise<T>
+  ): Promise<T> {
+    try {
+      return await action(locator);
+    } catch (error) {
+      if (!actionRecovery) throw error;
+
+      const replacement = await actionRecovery(this.page, this.describe(locator), intent);
+      if (!replacement) throw error;
+
+      // Retry exactly once. A healed action is still a failure worth fixing.
+      return action(replacement);
+    }
+  }
+
   // ---------------------------------------------------------------- navigation
 
   /** Navigates to `url`; a relative path resolves against the configured baseURL. */
@@ -51,7 +95,7 @@ export abstract class BasePage {
 
   async click(locator: Locator, options?: ClickOptions): Promise<void> {
     await this.step(`Click ${this.describe(locator)}`, async () => {
-      await locator.click(options);
+      await this.withRecovery(locator, 'element to click', (target) => target.click(options));
     });
   }
 
@@ -69,7 +113,9 @@ export abstract class BasePage {
 
   async fill(locator: Locator, text: string, options?: FillOptions): Promise<void> {
     await this.step(`Fill ${this.describe(locator)}`, async () => {
-      await locator.fill(text, options);
+      await this.withRecovery(locator, 'text input to fill', (target) =>
+        target.fill(text, options)
+      );
     });
   }
 
@@ -82,13 +128,13 @@ export abstract class BasePage {
 
   async selectDropdown(locator: Locator, value: SelectOptionValues): Promise<void> {
     await this.step(`Select option in ${this.describe(locator)}`, async () => {
-      await locator.selectOption(value);
+      await this.withRecovery(locator, 'select dropdown', (target) => target.selectOption(value));
     });
   }
 
   async check(locator: Locator): Promise<void> {
     await this.step(`Check ${this.describe(locator)}`, async () => {
-      await locator.check();
+      await this.withRecovery(locator, 'checkbox to check', (target) => target.check());
     });
   }
 

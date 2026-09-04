@@ -1,0 +1,14 @@
+node_modules
+test-results
+playwright-report
+blob-report
+allure-results
+allure-report
+playwright/.auth
+.git
+.github
+docs
+*.log
+.env
+.env.*
+!.env.example

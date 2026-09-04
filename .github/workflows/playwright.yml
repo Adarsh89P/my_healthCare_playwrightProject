@@ -2,9 +2,16 @@ name: Playwright Tests
 
 on:
   push:
-    branches: [main, master]
+    # `feature/**` is included because this repository's default branch is
+    # currently `feature/envconfig`. Once it is renamed to `main`, that entry
+    # can be dropped.
+    branches: [main, master, 'feature/**']
   pull_request:
-    branches: [main, master]
+    branches: [main, master, 'feature/**']
+  # Nightly full run at 02:00 UTC catches environment drift and slow-burn
+  # flakiness that a per-push run would not surface.
+  schedule:
+    - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
       suite:
@@ -46,6 +53,9 @@ jobs:
         run: npm run lint
       - name: Format check
         run: npm run format:check
+      # AI-layer parsing/fallback tests - no browser, no network, no API key.
+      - name: Unit tests
+        run: npm run test:unit
 
   # ------------------------------------------------------------------- test shards
   test:
@@ -172,7 +182,9 @@ jobs:
           keep_reports: 20
 
       - name: Publish Allure report to GitHub Pages
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        # Publish from whatever the repository's default branch is, so this
+        # keeps working after the branch is renamed to `main`.
+        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

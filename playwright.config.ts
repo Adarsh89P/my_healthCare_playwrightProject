@@ -3,6 +3,9 @@ import { BrowserName, config } from './src/core/config/env';
 
 const STORAGE_STATE = 'playwright/.auth/user.json';
 
+/** Unit tests live outside the browser projects entirely. */
+const UNIT_TESTS = '**/tests/unit/**';
+
 const DEVICE_FOR: Record<BrowserName, string> = {
   chromium: 'Desktop Chrome',
   firefox: 'Desktop Firefox',
@@ -54,11 +57,20 @@ export default defineConfig({
   },
 
   projects: [
+    /* Pure unit tests for the AI layer's parsing and fallback logic.
+       No browser, no auth, no network - runs in milliseconds. */
+    {
+      name: 'unit',
+      testDir: './tests/unit',
+      use: {},
+    },
+
     /* Logs in once and writes playwright/.auth/user.json. Every browser
        project depends on it, so tests start already authenticated. */
     {
       name: 'setup',
       testMatch: /.*\.setup\.ts/,
+      testIgnore: UNIT_TESTS,
     },
 
     /* Browser projects are generated from BROWSERS (chromium-only locally,
@@ -68,7 +80,7 @@ export default defineConfig({
       name: browser,
       use: { ...devices[DEVICE_FOR[browser]], storageState: STORAGE_STATE },
       dependencies: ['setup'],
-      testIgnore: /.*\.setup\.ts/,
+      testIgnore: [/.*\.setup\.ts/, UNIT_TESTS],
     })),
   ],
 });
