@@ -1,16 +1,27 @@
 import { Page } from '@playwright/test';
-import { BasePage } from '@core/pages/BasePage';
+import { BasePage } from '@core/base/BasePage';
+import { ROUTES } from '../config';
 
+/**
+ * Starting point for a new application's first page object.
+ *
+ * Extend `BasePage` so every action is wrapped in a `test.step` (readable
+ * reports) and routed through the optional self-healing hook.
+ */
 export class ExamplePage extends BasePage {
+  constructor(page: Page) {
+    super(page);
+  }
 
-    constructor(page: Page) {
-        super(page);
-    }
+  // TODO: replace with your application's real locators. Prefer role- and
+  // label-based locators over CSS - they survive markup changes.
+  readonly heading = this.page.getByRole('heading', { level: 1 });
 
-    // Define your locators here, e.g.:
-    // usernameInput = this.page.locator('#username');
+  async open(): Promise<void> {
+    await this.navigate(ROUTES.home);
+  }
 
-    async doSomething() {
-        // Use the inherited BasePage helpers: this.click(), this.fill(), this.expectVisible(), etc.
-    }
+  async expectLoaded(): Promise<void> {
+    await this.expectVisible(this.heading);
+  }
 }

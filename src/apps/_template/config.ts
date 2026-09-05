@@ -1,20 +1,13 @@
-import dotenv from 'dotenv';
-dotenv.config();
+/**
+ * Template application constants.
+ *
+ * Copy `src/apps/_template` to `src/apps/<your-app>`, then point the framework
+ * at the new app with `APP=<your-app> npm test`. URLs and credentials come from
+ * `.env.<TEST_ENV>` via `@core/config/env` - never hard-code them here.
+ */
+export const ROUTES = {
+  home: '/',
+  // TODO: replace with the routes your application actually exposes.
+} as const;
 
-const ENV = {
-    UAT: {
-        baseUrl: 'https://uat.example.com',
-    },
-    LIVE: {
-        baseUrl: 'https://live.example.com',
-    },
-};
-
-export const currentEnv = ENV[(process.env.ENV as keyof typeof ENV) || 'UAT'];
-
-export const credentials = {
-    user: {
-        username: process.env.TEMPLATE_USERNAME || '',
-        password: process.env.TEMPLATE_PASSWORD || '',
-    },
-};
+export type Route = (typeof ROUTES)[keyof typeof ROUTES];

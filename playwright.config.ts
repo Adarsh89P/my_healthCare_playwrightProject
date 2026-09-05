@@ -1,79 +1,93 @@
 import { defineConfig, devices } from '@playwright/test';
+import { BrowserName, config } from './src/core/config/env';
+
+const STORAGE_STATE = 'playwright/.auth/user.json';
 
 /**
- * Which app to run: selects the tests directory (tests/<app>).
- * Set via `APP=healthcare` env var; defaults to 'healthcare'.
+ * Which application to run. Selects both the test directory (`tests/<app>`)
+ * and, by convention, the page objects under `src/apps/<app>`. Adding a new
+ * application means adding those two directories - not editing this file.
  */
-const app = process.env.APP || 'healthcare';
+const APP = process.env['APP'] ?? 'healthcare';
+
+/** Unit tests live outside the browser projects entirely. */
+const UNIT_TESTS = '**/tests/unit/**';
+
+const DEVICE_FOR: Record<BrowserName, string> = {
+  chromium: 'Desktop Chrome',
+  firefox: 'Desktop Firefox',
+  webkit: 'Desktop Safari',
+};
 
 /**
- * See https://playwright.dev/docs/test-configuration.
+ * Framework-level Playwright configuration.
+ *
+ * Everything environment-specific (URLs, credentials, timeouts) comes from
+ * `config`, which reads .env.<TEST_ENV>. Pointing this framework at a different
+ * application should never require editing this file.
+ *
+ * See https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
-  testDir: `./tests/${app}`,
-  /* Run tests in files in parallel */
+  testDir: `./tests/${APP}`,
+
+  /* Per-test and per-assertion budgets, overridable via env vars. */
+  timeout: config.timeouts.test,
+  expect: { timeout: config.timeouts.expect },
+
   fullyParallel: true,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
-  forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-reporter: [
-  ['html'],
-  ['allure-playwright']
-],
+
+  /* Fail the build if a `test.only` was committed. */
+  forbidOnly: config.isCI,
+
+  retries: config.isCI ? 2 : 0,
+
+  /* Use the runner's cores in CI too; sharding in the workflow splits the load
+     further across machines. */
+  workers: config.isCI ? '50%' : undefined,
+
+  /* `blob` in CI so shards can be merged into one report afterwards. */
+  reporter: config.isCI
+    ? [['blob'], ['github'], ['allure-playwright'], ['list']]
+    : [['html', { open: 'never' }], ['allure-playwright'], ['list']],
+
   use: {
-    /* Base URL to use in actions like `await page.goto('')`. */
-    // baseURL: 'http://localhost:3000',
- 
-    trace: 'on-first-retry',
-     screenshot: 'only-on-failure'
+    baseURL: config.baseUrl,
+    headless: !config.headed,
+
+    actionTimeout: config.timeouts.action,
+    navigationTimeout: config.timeouts.navigation,
+
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
   },
 
-  /* Configure projects for major browsers */
   projects: [
+    /* Pure unit tests for the AI layer's parsing and fallback logic.
+       No browser, no auth, no network - runs in milliseconds. */
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'unit',
+      testDir: './tests/unit',
+      use: {},
     },
 
-    // {
-    //   name: 'firefox',
-    //   use: { ...devices['Desktop Firefox'] },
-    // },
+    /* Logs in once and writes playwright/.auth/user.json. Every browser
+       project depends on it, so tests start already authenticated. */
+    {
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
+      testIgnore: UNIT_TESTS,
+    },
 
-    // {
-    //   name: 'webkit',
-    //   use: { ...devices['Desktop Safari'] },
-    // },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
+    /* Browser projects are generated from BROWSERS (chromium-only locally,
+       all three in CI) so a project can pick its own coverage without
+       editing this file. */
+    ...config.browsers.map((browser) => ({
+      name: browser,
+      use: { ...devices[DEVICE_FOR[browser]], storageState: STORAGE_STATE },
+      dependencies: ['setup'],
+      testIgnore: [/.*\.setup\.ts/, UNIT_TESTS],
+    })),
   ],
-
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
 });

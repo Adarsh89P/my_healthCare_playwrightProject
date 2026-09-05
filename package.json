@@ -1,30 +1,71 @@
 {
-  "name": "my_healthcare_playwrightproject",
-  "version": "1.0.0",
-  "description": "",
+  "name": "playwright-automation-framework",
+  "version": "2.0.0",
+  "description": "Reusable Playwright + TypeScript end-to-end test automation framework. Point it at any web application through environment configuration - no framework rebuild required.",
   "main": "index.js",
   "scripts": {
     "test": "playwright test",
+    "test:unit": "playwright test --project=unit",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:regression": "playwright test --grep @regression",
+    "test:chromium": "playwright test --project=chromium",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:live": "cross-env TEST_ENV=live playwright test",
     "test:healthcare": "cross-env APP=healthcare playwright test",
     "test:healthcare:smoke": "cross-env APP=healthcare playwright test --grep @smoke",
     "test:healthcare:regression": "cross-env APP=healthcare playwright test --grep @regression",
+    "docker:build": "docker build -t playwright-framework .",
+    "docker:test": "docker run --rm --env-file .env.uat -v \"$PWD/playwright-report:/app/playwright-report\" playwright-framework",
+    "ai:generate": "ts-node -P tsconfig.cli.json -r tsconfig-paths/register src/ai/test-generator/cli.ts",
+    "ai:flaky": "ts-node -P tsconfig.cli.json -r tsconfig-paths/register src/ai/flaky-analyzer/cli.ts",
     "report": "playwright show-report",
-    "report:allure": "allure generate allure-results --clean -o allure-report && allure open allure-report"
+    "allure:generate": "allure generate allure-results --clean -o allure-report",
+    "allure:serve": "allure serve allure-results",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{ts,json,md,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,json,md,yml}\"",
+    "verify": "npm run typecheck && npm run lint && npm run format:check",
+    "clean": "rimraf test-results playwright-report allure-results allure-report blob-report playwright/.auth"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "playwright",
+    "typescript",
+    "e2e-testing",
+    "test-automation",
+    "framework",
+    "page-object-model",
+    "sdet"
+  ],
+  "author": "Adarsh89p",
   "license": "ISC",
   "type": "commonjs",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "devDependencies": {
+    "@eslint/js": "^9.39.0",
     "@playwright/test": "^1.61.0",
     "@types/node": "^26.0.0",
     "allure-commandline": "^2.34.0",
     "allure-playwright": "^3.10.0",
-    "cross-env": "^7.0.3",
-    "typescript": "^5.7.2"
+    "cross-env": "^10.1.0",
+    "eslint": "^9.39.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-playwright": "^2.2.2",
+    "prettier": "^3.6.2",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0"
   },
   "dependencies": {
-    "dotenv": "^16.4.5",
+    "@anthropic-ai/sdk": "^0.123.0",
+    "dotenv": "^16.6.1",
     "winston": "^3.19.0"
   }
 }

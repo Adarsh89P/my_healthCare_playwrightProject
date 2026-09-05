@@ -1,18 +1,25 @@
-# Adding a new project/app to this framework
+# Application template
 
-This folder is a starter scaffold. To stand up a new app (e.g. `ecommerce`):
+Copy this folder to onboard a new application. Nothing in `src/core` or `src/ai` needs to change.
 
-1. **Copy this folder** to `src/apps/<newapp>/` and rename `ExamplePage.ts`, `fixture.ts`, `example.json` to match your app.
-2. **Fill in `config.ts`** — set the real `baseUrl` per environment tier, and read any credentials from `process.env`.
-3. **Add credentials to `.env.example`** (documented, no real values) and your local `.env` (real values, gitignored).
-4. **Write page objects** under `pages/`, each extending `@core/pages/BasePage` for the shared helpers (`click`, `fill`, `expectVisible`, etc).
-5. **Register page objects as fixtures** in `fixtures/fixture.ts`, following the pattern in `src/apps/healthcare/fixtures/fixture.ts`.
-6. **Create `tests/<newapp>/smoke/...spec.ts`**, importing `test` from your new fixture file, `currentEnv`/`credentials` from your config, and tag tests `@smoke` / `@regression`.
-7. **Wire it into CI** — add `<newapp>` to the `matrix.app` list in `.github/workflows/playwright.yml` (both jobs).
-8. **Add npm scripts** in `package.json`, mirroring the `test:healthcare*` scripts, e.g.:
-   ```json
-   "test:<newapp>": "cross-env APP=<newapp> playwright test",
-   "test:<newapp>:smoke": "cross-env APP=<newapp> playwright test --grep @smoke"
-   ```
+## Steps
 
-To run tests against your new app locally: `cross-env APP=<newapp> npx playwright test` (or use the npm script from step 8). The `APP` env var controls which `tests/<app>` directory Playwright picks up — see `testDir` in `playwright.config.ts`.
+1. **Copy the folder.** `cp -r src/apps/_template src/apps/<your-app>`
+2. **Create the test folder.** `mkdir -p tests/<your-app>/{smoke,regression,setup}`
+3. **Point at the app.** Add `BASE_URL` and credentials to `.env.<TEST_ENV>` — see `.env.example`.
+   No URL is ever hard-coded in code.
+4. **Declare the routes** in `config.ts`. This file holds only the app's route shape; everything
+   environment-specific stays in `.env`.
+5. **Write page objects** under `pages/`, each extending `@core/base/BasePage` for the shared
+   helpers (`click`, `fill`, `expectVisible`, …). Those wrappers emit `test.step` entries and route
+   through the optional self-healing hook.
+6. **Expose them as fixtures** in `fixtures/index.ts`, which extends `@core/fixtures/base` so the
+   app inherits the optional AI layer automatically.
+7. **Run it.** `APP=<your-app> npm test`
+
+## Conventions
+
+- Specs import only `@apps/<your-app>/fixtures/index` — never a page class directly, and never `new`.
+- Tag tests `@smoke` or `@regression` so `npm run test:smoke` stays meaningful.
+- Put a `*.setup.ts` in `tests/<your-app>/setup/` if the app needs authentication; the `setup`
+  project picks it up by filename and every browser project depends on it.

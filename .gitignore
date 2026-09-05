@@ -1,13 +1,27 @@
-
-# Playwright
+# Dependencies
 node_modules/
+
+# Playwright artefacts
 /test-results/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+# Allure artefacts
 /allure-results/
 /allure-report/
 
-# Secrets
+# Environment files (hold credentials) - see .env.example
 .env
+.env.*
+!.env.example
+
+# Editor / OS
+.DS_Store
+.idea/
+*.log
+
+# AI layer artefacts (advisory output, regenerated each run)
+/generated/
+/ci-runs/
