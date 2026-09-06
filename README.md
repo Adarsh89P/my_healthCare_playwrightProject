@@ -229,11 +229,11 @@ PW_TEST_CONNECT_WS_ENDPOINT=ws://<host>:3000/ npm test
 Every `BasePage` action emits a named `test.step`, so both reports read as a legible sequence
 ("Click button[type=submit]" → "Expect #facility to have text …") rather than a wall of raw calls.
 
-![Test report](docs/report.png)
+![Playwright HTML report showing the passing suite](docs/test-report-screenshot.png)
 
-<!-- TODO: docs/report.png does not exist yet. Run `npm test && npm run report`, screenshot the
-     summary, and save it as docs/report.png. The existing docs/test-report-screenshot.png shows an
-     older 10-test run and is stale. -->
+<!-- TODO: this screenshot predates the current 57-test suite. Regenerate with
+     `npm test && npm run report`, screenshot the summary, and overwrite
+     docs/test-report-screenshot.png. -->
 
 ---
 
@@ -398,14 +398,17 @@ calls at all**, regardless of flags.
 
 ## What I would add next
 
-|                                                  | Why                                                                                                            |
-| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
-| **API test layer** (`APIRequestContext`)         | Seed and tear down state via API instead of the UI — faster and less brittle                                   |
-| **Visual regression** (`toHaveScreenshot`)       | Catches layout breakage no DOM assertion will                                                                  |
-| **Accessibility scans** (`@axe-core/playwright`) | High value on a healthcare product; ~20 lines for real coverage                                                |
-| **AI-assisted layer**                            | Failure triage, self-healing locator _suggestions_, flakiness analysis — advisory only, never gating pass/fail |
-| **Coverage depth**                               | The current suite is a reference, not a product suite — boundary cases, session expiry, concurrent booking     |
-| **Pre-commit hooks** (husky + lint-staged)       | Move the quality gate left, off CI                                                                             |
+Everything below is **not** built. What _is_ built and working is described above — see
+[AI-assisted capabilities](#ai-assisted-capabilities) for the AI layer, which is complete and
+shipping on `main`, not a plan.
+
+|                                                  | Why                                                                                                        |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| **API test layer** (`APIRequestContext`)         | Seed and tear down state via API instead of the UI — faster and less brittle                               |
+| **Visual regression** (`toHaveScreenshot`)       | Catches layout breakage no DOM assertion will                                                              |
+| **Accessibility scans** (`@axe-core/playwright`) | High value on a healthcare product; ~20 lines for real coverage                                            |
+| **Coverage depth**                               | The current suite is a reference, not a product suite — boundary cases, session expiry, concurrent booking |
+| **Pre-commit hooks** (husky + lint-staged)       | Move the quality gate left, off CI                                                                         |
 
 ---
 
