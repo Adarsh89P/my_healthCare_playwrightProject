@@ -13,6 +13,26 @@ const APP = process.env['APP'] ?? 'healthcare';
 /** Unit tests live outside the browser projects entirely. */
 const UNIT_TESTS = '**/tests/unit/**';
 
+/**
+ * Options that only mean something to a project that opens a browser.
+ *
+ * `baseURL` is read through `optionalBaseUrl`, which returns undefined rather
+ * than throwing, so loading this file never demands a URL. A run that actually
+ * needs one hits the assertion in tests/healthcare/setup/auth.setup.ts, which
+ * every browser project depends on.
+ */
+const BROWSER_USE = {
+  baseURL: config.optionalBaseUrl,
+  headless: !config.headed,
+
+  actionTimeout: config.timeouts.action,
+  navigationTimeout: config.timeouts.navigation,
+
+  trace: 'retain-on-failure',
+  screenshot: 'only-on-failure',
+  video: 'retain-on-failure',
+} as const;
+
 const DEVICE_FOR: Record<BrowserName, string> = {
   chromium: 'Desktop Chrome',
   firefox: 'Desktop Firefox',
@@ -51,17 +71,12 @@ export default defineConfig({
     ? [['blob'], ['github'], ['allure-playwright'], ['list']]
     : [['html', { open: 'never' }], ['allure-playwright'], ['list']],
 
-  use: {
-    baseURL: config.baseUrl,
-    headless: !config.headed,
-
-    actionTimeout: config.timeouts.action,
-    navigationTimeout: config.timeouts.navigation,
-
-    trace: 'retain-on-failure',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-  },
+  /* NOTE: there is deliberately no top-level `use` block.
+     Playwright evaluates the whole config eagerly - every project's options,
+     whichever project you actually selected - so a browser setting here is a
+     setting the `unit` project is forced to satisfy too. That is how
+     `--project=unit` came to require BASE_URL despite never opening a page.
+     Browser-only options live in BROWSER_USE below. */
 
   projects: [
     /* Pure unit tests for the AI layer's parsing and fallback logic.
@@ -69,6 +84,8 @@ export default defineConfig({
     {
       name: 'unit',
       testDir: './tests/unit',
+      /* Empty on purpose: no browser, no baseURL, no credentials. This project
+         must run on a fresh clone with no .env file and no variables set. */
       use: {},
     },
 
@@ -78,6 +95,7 @@ export default defineConfig({
       name: 'setup',
       testMatch: /.*\.setup\.ts/,
       testIgnore: UNIT_TESTS,
+      use: BROWSER_USE,
     },
 
     /* Browser projects are generated from BROWSERS (chromium-only locally,
@@ -85,7 +103,7 @@ export default defineConfig({
        editing this file. */
     ...config.browsers.map((browser) => ({
       name: browser,
-      use: { ...devices[DEVICE_FOR[browser]], storageState: STORAGE_STATE },
+      use: { ...BROWSER_USE, ...devices[DEVICE_FOR[browser]], storageState: STORAGE_STATE },
       dependencies: ['setup'],
       testIgnore: [/.*\.setup\.ts/, UNIT_TESTS],
     })),

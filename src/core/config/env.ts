@@ -98,10 +98,29 @@ export const config = {
     return required('BASE_URL');
   },
 
+  /**
+   * BASE_URL when set, otherwise `undefined`.
+   *
+   * For `playwright.config.ts` only. Playwright evaluates the entire config
+   * eagerly - every project's `use` block, whichever project you selected - so
+   * reading the throwing `baseUrl` there makes `--project=unit` fail for want
+   * of a URL it never uses. The requirement has not been dropped: the `setup`
+   * project asserts it, and every browser project depends on `setup`.
+   */
+  get optionalBaseUrl(): string | undefined {
+    loadEnvFile();
+    const value = process.env.BASE_URL?.trim();
+    return value && value.length > 0 ? value : undefined;
+  },
+
   /** Base URL for API tests. Falls back to BASE_URL when unset. */
   get apiBaseUrl(): string {
     loadEnvFile();
-    return optional('API_BASE_URL', this.baseUrl);
+    // Resolved by hand rather than via optional(name, fallback): that helper
+    // evaluates its fallback eagerly, so an API-only suite with API_BASE_URL
+    // set but BASE_URL absent would still throw for the unused variable.
+    const explicit = process.env.API_BASE_URL?.trim();
+    return explicit && explicit.length > 0 ? explicit : this.baseUrl;
   },
 
   /** Standard end-user account. */

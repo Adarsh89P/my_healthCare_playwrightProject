@@ -17,6 +17,12 @@ import path from 'path';
 export const STORAGE_STATE = path.resolve(process.cwd(), 'playwright/.auth/user.json');
 
 setup('authenticate as standard user', async ({ page }) => {
+  // Reading the strict getter here is what enforces BASE_URL for browser runs.
+  // playwright.config.ts deliberately uses the non-throwing `optionalBaseUrl`
+  // so that `--project=unit` loads without it; this assertion is where the
+  // requirement actually lives, and every browser project depends on setup.
+  expect(config.baseUrl, 'BASE_URL must be set for browser tests').toBeTruthy();
+
   const loginPage = new LoginPage(page);
 
   await page.goto('/');
